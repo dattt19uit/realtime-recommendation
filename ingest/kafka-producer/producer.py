@@ -8,7 +8,7 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
-with open("ingest\data\events.csv", "r") as f:
+with open("..\data\events.csv", "r") as f:
     reader = csv.DictReader(f)
 
     for row in reader:
