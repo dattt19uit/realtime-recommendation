@@ -1,25 +1,32 @@
+import { ItemDTO } from "@/lib/types";
+
 type Props = {
-  userId: string;
-  onClickItem: (itemId: string) => void;
+  items: ItemDTO[];
+  onClickItem: (itemId: string) => void | Promise<void>;
 };
 
-const items = ["6586", "12345", "190070", "343256", "158666"];
+export default function ItemList({ items, onClickItem }: Props) {
+  if (!items || items.length === 0) {
+    return <p className="text-gray-500">No items</p>;
+  }
 
-export default function ItemList({ onClickItem }: Props) {
   return (
-    <div className="mb-6">
-      <h2 className="font-semibold">Items</h2>
-      <div className="flex gap-2 mt-2">
-        {items.map((id) => (
-          <button
-            key={id}
-            className="border px-3 py-1"
-            onClick={() => onClickItem(id)}
-          >
-            Item {id}
-          </button>
-        ))}
-      </div>
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {items.map((item) => (
+        <div
+          key={item.itemId}
+          className="border rounded p-3 cursor-pointer hover:shadow"
+          onClick={() => onClickItem(item.itemId)}
+        >
+          <div className="font-semibold">Item #{item.itemId}</div>
+          <div className="text-sm text-gray-600">
+            Category: {item.categoryId}
+          </div>
+          <div className="text-sm">
+            {item.available === "1" ? "✅ Available" : "❌ Out of stock"}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

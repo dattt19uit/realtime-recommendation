@@ -20,6 +20,28 @@ import java.util.List;
 
 public class FlinkJob {
 
+    private static void updateTrending(UserEvent event, Jedis jedis) {
+
+        if (!"view".equals(event.getEventType())) {
+            return;
+        }
+
+        String itemId = event.getItemId();
+
+        // Lấy categoryId từ Redis
+        String categoryId = jedis.hget("item:" + itemId, "categoryid");
+        if (categoryId == null) {
+            return;
+        }
+
+        String key = "category:" + categoryId + ":popular";
+
+        jedis.zincrby(key, 1, itemId);
+
+        // Giữ top 100 item mỗi category
+        jedis.zremrangeByRank(key, 0, -101);
+    }
+
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env =
@@ -81,41 +103,38 @@ public class FlinkJob {
                 Context ctx,
                 Collector<Void> out) throws Exception {
 
+            if (!"view".equals(event.getEventType())) {
+                return;
+            }
+
             String userId = event.getUserId();
             String currentItem = event.getItemId();
 
-            // Lưu recent items của user
-            jedis.lpush("user:" + userId + ":recent", currentItem);
-            jedis.ltrim("user:" + userId + ":recent", 0, MAX_RECENT_ITEMS - 1);
-
-            // 2Lấy items trước đó từ state
             List<String> items = new ArrayList<>();
             for (String item : recentItems.get()) {
                 items.add(item);
             }
 
-            // Update item-item co-occurrence
+            // Update item-item co-view
             for (String item : items) {
                 if (!item.equals(currentItem)) {
-                    jedis.zincrby(
-                            "item:" + item + ":related",
-                            1,
-                            currentItem
-                    );
-                    jedis.zincrby(
-                            "item:" + currentItem + ":related",
-                            1,
-                            item
-                    );
+                    jedis.zincrby("item:" + item + ":related", 1, currentItem);
+                    jedis.zincrby("item:" + currentItem + ":related", 1, item);
                 }
             }
 
-            // Update state
+            // Update session state
             items.add(currentItem);
             if (items.size() > MAX_RECENT_ITEMS) {
                 items = items.subList(items.size() - MAX_RECENT_ITEMS, items.size());
             }
             recentItems.update(items);
+
+            // Sync recent items to Redis (serving only)
+            jedis.lpush("user:" + userId + ":recent", currentItem);
+            jedis.ltrim("user:" + userId + ":recent", 0, MAX_RECENT_ITEMS - 1);
+
+            updateTrending(event, jedis);
         }
 
         @Override
