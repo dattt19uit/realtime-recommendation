@@ -111,7 +111,11 @@ export default function Home() {
             </span>
           </h2>
 
-          <ItemList items={items} onClickItem={handleClickItem} />
+          <ItemList
+            items={items}
+            onClickItem={handleClickItem}
+            maxItemsPerPage={9}
+          />
         </div>
 
         {/* Recommendation */}
