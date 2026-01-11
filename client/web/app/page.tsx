@@ -24,6 +24,11 @@ export default function Home() {
   );
   const [items, setItems] = useState<ItemDTO[]>([]);
 
+  useEffect(() => {
+    const id = setInterval(loadRecommend, 1000);
+    return () => clearInterval(id);
+  }, [userId]);
+
   /** Load categories */
   useEffect(() => {
     async function init() {
@@ -59,7 +64,10 @@ export default function Home() {
   /** Click item → send event → refresh recommendation */
   const handleClickItem = async (itemId: string) => {
     await sendEvent({ userId, itemId, eventType: "view" });
-    await loadRecommend(); // realtime update
+
+    setTimeout(() => {
+      loadRecommend();
+    }, 100); // 300–500ms là đẹp
   };
 
   return (
