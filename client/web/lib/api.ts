@@ -43,7 +43,18 @@ export async function getItemsByCategory(
     .map((i) => ({
       itemId: i.itemId,
       categoryId: i.categoryId,
-      categoryPath: [i.categoryId], // 👈 FIX QUAN TRỌNG
+      categoryPath: [i.categoryId],
       available: i.available,
     }));
+}
+
+export async function getItemById(itemId: string): Promise<ItemDTO | null> {
+  const found = items.find((i) => i.itemId === itemId);
+  if (!found) return null;
+  return {
+    itemId: found.itemId,
+    categoryId: found.categoryId,
+    categoryPath: [found.categoryId],
+    available: found.available,
+  };
 }

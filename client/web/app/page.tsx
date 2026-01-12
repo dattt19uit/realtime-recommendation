@@ -6,6 +6,7 @@ import {
   getRecommendation,
   getCategories,
   getItemsByCategory,
+  getItemById,
 } from "@/lib/api";
 import { CategoryDTO, ItemDTO } from "@/lib/types";
 import ItemList from "@/components/ItemList";
@@ -23,6 +24,11 @@ export default function Home() {
     null
   );
   const [items, setItems] = useState<ItemDTO[]>([]);
+
+  // Search state
+  const [searchId, setSearchId] = useState("");
+  const [searchResult, setSearchResult] = useState<ItemDTO | null>(null);
+  const [searchError, setSearchError] = useState("");
 
   useEffect(() => {
     const id = setInterval(loadRecommend, 1000);
@@ -70,6 +76,28 @@ export default function Home() {
     }, 100); // 300–500ms là đẹp
   };
 
+  /** Search item by id */
+  const handleSearch = async () => {
+    const id = searchId.trim();
+    if (!id) return;
+
+    // Optional: only allow digits
+    if (!/^[0-9]+$/.test(id)) {
+      setSearchError("Please enter a numeric item id");
+      setSearchResult(null);
+      return;
+    }
+
+    const res = await getItemById(id);
+    if (!res) {
+      setSearchError("Item not found");
+      setSearchResult(null);
+    } else {
+      setSearchResult(res);
+      setSearchError("");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gray-100 p-8">
       {/* Header */}
@@ -96,7 +124,64 @@ export default function Home() {
         >
           Load Recommendation
         </button>
+
+        {/* Item search */}
+        <div className="ml-4 flex items-center gap-2">
+          <input
+            className="border rounded px-3 py-1 w-40"
+            placeholder="Search Item ID"
+            value={searchId}
+            onChange={(e) => setSearchId(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            onClick={handleSearch}
+          >
+            Search
+          </button>
+          <button
+            className="px-2 py-1 border rounded"
+            onClick={() => {
+              setSearchId("");
+              setSearchResult(null);
+              setSearchError("");
+            }}
+          >
+            Clear
+          </button>
+        </div>
       </div>
+
+      {/* Search result */}
+      {searchResult ? (
+        <div className="bg-white rounded shadow p-4 mb-6">
+          <h3 className="font-semibold mb-2">Search Result</h3>
+          <div
+            className="border rounded p-3 cursor-pointer hover:shadow"
+            role="button"
+            onClick={() => handleClickItem(searchResult.itemId)}
+            title="Click to view item"
+          >
+            <div className="font-semibold">Item #{searchResult.itemId}</div>
+            <div className="text-sm text-gray-600">
+              Category: {searchResult.categoryId}
+            </div>
+            <div className="text-sm">
+              {searchResult.available === "1"
+                ? "✅ Available"
+                : "❌ Out of stock"}
+            </div>
+            <div className="text-xs text-gray-400 mt-2">
+              Click to send view event
+            </div>
+          </div>
+        </div>
+      ) : (
+        searchError && (
+          <p className="text-sm text-red-500 mb-6">{searchError}</p>
+        )
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
