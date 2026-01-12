@@ -41,9 +41,7 @@ export default function Recommendation({
             {recommendedItems.map((item, idx) => (
               <li
                 key={idx}
-                className={`border rounded p-2 text-sm flex justify-between ${
-                  item.available === "0" ? "opacity-50" : ""
-                }`}
+                className="border rounded p-2 text-sm flex justify-between"
               >
                 <span>Item #{item.itemId}</span>
                 <span className="text-gray-500">Cat {item.categoryId}</span>
