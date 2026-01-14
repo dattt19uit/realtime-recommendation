@@ -30,6 +30,7 @@ public class EventController {
         event.put("event_time", System.currentTimeMillis());
 
         producer.sendEvent(mapper.writeValueAsString(event));
+        System.out.println(mapper.writeValueAsString(event));
         return ResponseEntity.ok().build();
     }
 }

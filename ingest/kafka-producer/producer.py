@@ -20,7 +20,10 @@ with open("..\data\events.csv", "r") as f:
             "transaction_id": row["transactionid"] or None
         }
 
+        print("SEND EVENT:", json.dumps(event, ensure_ascii=False))
+
         producer.send("user-events", event)
         time.sleep(0.01)
+
 
 producer.flush()

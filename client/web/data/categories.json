@@ -1,5 +1,42 @@
 [
-  { "id": "491", "name": "Electronics" },
-  { "id": "1613", "name": "Fashion" },
-  { "id": "1404", "name": "Home & Living" }
+  {
+    "id": "491",
+    "name": "Electronics"
+  },
+  {
+    "id": "1613",
+    "name": "Fashion"
+  },
+  {
+    "id": "1404",
+    "name": "Home & Living"
+  },
+  {
+    "id": "1661",
+    "name": "Sports & Outdoor"
+  },
+  {
+    "id": "1205",
+    "name": "Beauty & Personal Care"
+  },
+  {
+    "id": "1101",
+    "name": "Books & Stationery"
+  },
+  {
+    "id": "900",
+    "name": "Toys & Kids"
+  },
+  {
+    "id": "600",
+    "name": "Automotive"
+  },
+  {
+    "id": "700",
+    "name": "Groceries"
+  },
+  {
+    "id": "800",
+    "name": "Office Supplies"
+  }
 ]
