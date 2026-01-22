@@ -27,19 +27,21 @@ public class FlinkJob {
         }
 
         String itemId = event.getItemId();
-
-        // Lấy categoryId từ Redis
         String categoryId = jedis.hget("item:" + itemId, "categoryid");
+
         if (categoryId == null) {
+            System.out.println("[TRENDING] Item " + itemId + " has no category");
             return;
         }
 
         String key = "category:" + categoryId + ":popular";
-
         jedis.zincrby(key, 1, itemId);
-
-        // Giữ top 100 item mỗi category
         jedis.zremrangeByRank(key, 0, -101);
+
+        System.out.println(
+                "[TRENDING] Increase score of item " + itemId +
+                        " in category " + categoryId
+        );
     }
 
     public static void main(String[] args) throws Exception {
@@ -49,7 +51,6 @@ public class FlinkJob {
 
         env.setParallelism(1);
 
-        // Kafka Source
         KafkaSource<String> source = KafkaSource.<String>builder()
                 .setBootstrapServers("localhost:9092")
                 .setTopics("user-events")
@@ -67,9 +68,12 @@ public class FlinkJob {
         ObjectMapper mapper = new ObjectMapper();
 
         DataStream<UserEvent> events = rawStream
-                .map(json -> mapper.readValue(json, UserEvent.class));
+                .map(json -> {
+                    UserEvent event = mapper.readValue(json, UserEvent.class);
+                    System.out.println("[KAFKA] Receive event: " + event);
+                    return event;
+                });
 
-        // Core logic
         events
                 .keyBy(UserEvent::getUserId)
                 .process(new UserBehaviorProcess())
@@ -78,7 +82,8 @@ public class FlinkJob {
         env.execute("Realtime Recommendation Job");
     }
 
-    //  PROCESS FUNCTION
+    // ================= PROCESS FUNCTION =================
+
     public static class UserBehaviorProcess
             extends KeyedProcessFunction<String, UserEvent, Void> {
 
@@ -95,6 +100,8 @@ public class FlinkJob {
             );
 
             jedis = new Jedis("localhost", 6379);
+
+            System.out.println("[INIT] UserBehaviorProcess started");
         }
 
         @Override
@@ -110,16 +117,29 @@ public class FlinkJob {
             String userId = event.getUserId();
             String currentItem = event.getItemId();
 
+            System.out.println(
+                    "\n[PROCESS] User " + userId +
+                            " viewed item " + currentItem
+            );
+
+            // Load session history
             List<String> items = new ArrayList<>();
             for (String item : recentItems.get()) {
                 items.add(item);
             }
+
+            System.out.println("[SESSION] Previous recent items: " + items);
 
             // Update item-item co-view
             for (String item : items) {
                 if (!item.equals(currentItem)) {
                     jedis.zincrby("item:" + item + ":related", 1, currentItem);
                     jedis.zincrby("item:" + currentItem + ":related", 1, item);
+
+                    System.out.println(
+                            "[CO-VIEW] Increase relation: " +
+                                    item + " <-> " + currentItem
+                    );
                 }
             }
 
@@ -130,9 +150,15 @@ public class FlinkJob {
             }
             recentItems.update(items);
 
-            // Sync recent items to Redis (serving only)
+            System.out.println("[SESSION] Updated recent items: " + items);
+
+            // Sync to Redis (serving)
             jedis.lpush("user:" + userId + ":recent", currentItem);
             jedis.ltrim("user:" + userId + ":recent", 0, MAX_RECENT_ITEMS - 1);
+
+            System.out.println(
+                    "[REDIS] Sync recent list for user " + userId
+            );
 
             updateTrending(event, jedis);
         }
@@ -140,6 +166,7 @@ public class FlinkJob {
         @Override
         public void close() {
             jedis.close();
+            System.out.println("[CLOSE] Jedis connection closed");
         }
     }
 }
